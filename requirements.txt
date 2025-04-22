@@ -8,3 +8,4 @@ PyMuPDF==1.25.2
 requests
 openpyxl
 posthog
+python-multipart
