@@ -24,7 +24,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-openai.api_key = os.getenv(api_key=os.getenv("OPENAI_API_KEY"))
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 def extract_text(file_bytes: bytes) -> str:
     with tempfile.NamedTemporaryFile(delete=False, suffix=".docx") as tmp:
