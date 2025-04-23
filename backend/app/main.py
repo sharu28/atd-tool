@@ -9,6 +9,7 @@ from docx import Document
 import openai
 from pathlib import Path
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 load_dotenv()  # Load .env variables
 
@@ -49,7 +50,8 @@ def extract_text(file_bytes: bytes) -> str:
 @app.post("/validate")
 async def validate(file: UploadFile = File(...)):
     try:
-        with open("app/prompt.json") as f:
+        base_path = Path(__file__).parent
+        with open(base_path / "prompt.json") as f:
             prompt_data = json.load(f)
 
         system_prompt = prompt_data["system"]
@@ -84,18 +86,18 @@ async def validate(file: UploadFile = File(...)):
 # Admin: Get current prompt
 @app.get("/prompt")
 def get_prompt(auth: bool = Depends(check_admin)):
-    with open("app/prompt.json") as f:
+    base_path = Path(__file__).parent
+    with open(base_path / "prompt.json") as f:
         return json.load(f)
 
 # Admin: Update prompt
 @app.put("/prompt")
 def update_prompt(new_prompt: dict, auth: bool = Depends(check_admin)):
-    with open("app/prompt.json", "w") as f:
+    base_path = Path(__file__).parent
+    with open(base_path / "prompt.json", "w") as f:
         json.dump(new_prompt, f, indent=2)
     return {"msg": "Prompt updated"}
 
-from fastapi.staticfiles import StaticFiles
-
-app_dir = Path(__file__).parent
-static_dir = app_dir / "static"
+# Serve frontend
+static_dir = Path(__file__).parent / "static"
 app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
