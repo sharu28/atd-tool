@@ -9,11 +9,13 @@ from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from docx import Document
 from pathlib import Path
-from openai import OpenAI
+import openai  # old v0.28 import
 
+# 1) Load env
 load_dotenv()
-app = FastAPI()
 
+# 2) FastAPI + CORS
+app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -22,70 +24,75 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-client = OpenAI()  # picks up OPENAI_API_KEY
+# 3) OpenAI global setup
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
+# 4) Admin auth
 security = HTTPBasic()
-ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = os.getenv("ADMIN_PASS", "secret123")
+ADMIN_USER = "admin"
+ADMIN_PASS = os.getenv("ADMIN_PASS", "secret123")
 
 def check_admin(creds: HTTPBasicCredentials = Depends(security)):
-    if creds.username == ADMIN_USERNAME and creds.password == ADMIN_PASSWORD:
+    if creds.username == ADMIN_USER and creds.password == ADMIN_PASS:
         return True
     raise HTTPException(401, "Unauthorized")
 
-def extract_text(file_bytes: bytes) -> str:
+# 5) .docx → text
+def extract_text(bytes_data: bytes) -> str:
     with tempfile.NamedTemporaryFile(delete=False, suffix=".docx") as tmp:
-        tmp.write(file_bytes)
+        tmp.write(bytes_data)
         tmp.seek(0)
         doc = Document(tmp.name)
     return "\n".join(p.text for p in doc.paragraphs)
 
+# 6) /validate endpoint
 @app.post("/validate")
 async def validate(file: UploadFile = File(...)):
     try:
         base = Path(__file__).parent
-        with open(base / "prompt.json") as f:
-            prompt = json.load(f)
-
-        system = prompt["system"]
+        prompt = json.loads((base / "prompt.json").read_text())
+        system   = prompt["system"]
         checklist = prompt["checklist"]
 
-        soa = extract_text(await file.read())
+        soa_text = extract_text(await file.read())
+
         results = []
         for item in checklist:
-            resp = client.chat.completions.create(
-                model="gpt-4o-128k",
+            resp = openai.ChatCompletion.create(
+                model="gpt-4o",     # revert to a model you have access to
                 temperature=0,
                 messages=[
                     {"role": "system", "content": system},
-                    {"role": "user", "content": f"Checklist item: {item}\n\nSOA content:\n{soa}"}
+                    {"role": "user",   "content": f"Checklist item: {item}\n\nSOA content:\n{soa_text}"}
                 ]
             )
             text = resp.choices[0].message.content.strip()
-            bullets = [l.strip("•- ") for l in text.splitlines() if l.strip()]
+            bullets = [ln.strip("•- \n") for ln in text.splitlines() if ln.strip()]
             results.append({"item": item, "points": bullets})
 
         return results
 
     except Exception as e:
-        print("ERROR:", e)
-        return JSONResponse(500, {"error": str(e)})
+        # This will now correctly return status 500 with a JSON body
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
+# 7) /prompt GET & PUT (admin only)
 @app.get("/prompt")
-def get_prompt(auth=Depends(check_admin)):
+def get_prompt(ok: bool = Depends(check_admin)):
     base = Path(__file__).parent
-    return json.load(open(base / "prompt.json"))
+    return json.loads((base / "prompt.json").read_text())
 
 @app.put("/prompt")
-def update_prompt(new: dict, auth=Depends(check_admin)):
+def set_prompt(new_prompt: dict, ok: bool = Depends(check_admin)):
     base = Path(__file__).parent
-    with open(base / "prompt.json", "w") as f:
-        json.dump(new, f, indent=2)
+    (base / "prompt.json").write_text(json.dumps(new_prompt, indent=2))
     return {"msg": "Prompt updated"}
 
+# 8) Serve frontend
 static_dir = Path(__file__).parent / "static"
 app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
 
+# 9) SPA catch-all
 @app.get("/{full_path:path}")
 async def spa(full_path: str):
     return FileResponse(static_dir / "index.html")
