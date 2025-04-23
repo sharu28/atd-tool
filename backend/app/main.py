@@ -8,6 +8,7 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from docx import Document
 import openai
 from pathlib import Path
+from fastapi.responses import JSONResponse
 
 load_dotenv()  # Load .env variables
 
@@ -47,33 +48,38 @@ def extract_text(file_bytes: bytes) -> str:
 # Validate SOA using checklist and GPT
 @app.post("/validate")
 async def validate(file: UploadFile = File(...)):
-    with open("app/prompt.json") as f:
-        prompt_data = json.load(f)
+    try:
+        with open("app/prompt.json") as f:
+            prompt_data = json.load(f)
 
-    system_prompt = prompt_data["system"]
-    checklist = prompt_data["checklist"]
+        system_prompt = prompt_data["system"]
+        checklist = prompt_data["checklist"]
 
-    file_bytes = await file.read()
-    soa_text = extract_text(file_bytes)
+        file_bytes = await file.read()
+        soa_text = extract_text(file_bytes)
 
-    results = []
-    for item in checklist:
-        completion = openai.chat.completions.create(
-            model="gpt-4o",
-            temperature=0,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Checklist item: {item}\n\nSOA content:\n{soa_text[:12000]}"}
-            ]
-        )
-        response = completion.choices[0].message.content.strip()
-        bullets = [line.strip("•- \n") for line in response.split("\n") if line.strip()]
-        results.append({
-            "item": item,
-            "points": bullets
-        })
+        results = []
+        for item in checklist:
+            completion = openai.chat.completions.create(
+                model="gpt-4o",
+                temperature=0,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": f"Checklist item: {item}\n\nSOA content:\n{soa_text[:12000]}"}
+                ]
+            )
+            response = completion.choices[0].message.content.strip()
+            bullets = [line.strip("•- \n") for line in response.split("\n") if line.strip()]
+            results.append({
+                "item": item,
+                "points": bullets
+            })
 
-    return results
+        return results
+
+    except Exception as e:
+        print("⚠️ BACKEND ERROR:", str(e))  # This prints to Render logs
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 # Admin: Get current prompt
 @app.get("/prompt")
