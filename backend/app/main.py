@@ -55,32 +55,33 @@ async def validate(file: UploadFile = File(...)):
             prompt_data = json.load(f)
 
         system_prompt = prompt_data["system"]
-        checklist = prompt_data["checklist"]
+        checklist    = prompt_data["checklist"]
 
         file_bytes = await file.read()
-        soa_text = extract_text(file_bytes)
+        soa_text   = extract_text(file_bytes)
 
         results = []
         for item in checklist:
-            completion = openai.chat.completions.create(
-                model="gpt-4o",
-                temperature=0,
+            completion = openai.ChatCompletion.create(
+            model="gpt-4o",
+            temperature=0,
                 messages=[
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": f"Checklist item: {item}\n\nSOA content:\n{soa_text[:12000]}"}
+                    {"role": "user",   "content": f"Checklist item: {item}\n\nSOA content:\n{soa_text[:12000]}"}
                 ]
             )
             response = completion.choices[0].message.content.strip()
-            bullets = [line.strip("•- \n") for line in response.split("\n") if line.strip()]
+            bullets  = [ln.strip("•- \n") for ln in response.split("\n") if ln.strip()]
+
             results.append({
-                "item": item,
+                "item":   item,
                 "points": bullets
             })
 
         return results
 
     except Exception as e:
-        print("⚠️ BACKEND ERROR:", str(e))  # This prints to Render logs
+        print("⚠️ BACKEND ERROR:", e)
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 # Admin: Get current prompt
