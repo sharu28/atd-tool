@@ -49,7 +49,7 @@ async def validate(file: UploadFile = File(...)):
         soa_text = extract_text(await file.read())[:120000]   # 120 k char cap
 
         resp = client.chat.completions.create(
-            model="gpt-4o-preview",          # 128 k context, supports JSON
+            model="gpt-4o",          # 128 k context, supports JSON
             temperature=0,
             response_format={"type": "json_object"},
             messages=[
