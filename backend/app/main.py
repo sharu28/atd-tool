@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from docx import Document
 import openai
+from pathlib import Path
 
 load_dotenv()  # Load .env variables
 
@@ -88,4 +89,7 @@ def update_prompt(new_prompt: dict, auth: bool = Depends(check_admin)):
     return {"msg": "Prompt updated"}
 
 from fastapi.staticfiles import StaticFiles
-app.mount("/", StaticFiles(directory="app/static", html=True), name="static")
+
+app_dir = Path(__file__).parent
+static_dir = app_dir / "static"
+app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
