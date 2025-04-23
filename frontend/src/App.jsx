@@ -23,7 +23,7 @@ function App() {
     setResults([]);
 
     try {
-      const res = await fetch('http://127.0.0.1:8000/validate', {
+      const res = await fetch('/validate', {
         method: 'POST',
         body: formData,
       });
@@ -40,7 +40,7 @@ function App() {
 
   useEffect(() => {
     if (isAdmin) {
-      fetch('http://127.0.0.1:8000/prompt', { headers: basicAuthHeader })
+      fetch('/prompt', { headers: basicAuthHeader })
         .then((res) => res.json())
         .then((data) => {
           setPrompt(data);
@@ -100,7 +100,7 @@ function App() {
 
           <button
             onClick={() => {
-              fetch('http://127.0.0.1:8000/prompt', {
+              fetch('/prompt', {
                 method: 'PUT',
                 headers: {
                   ...basicAuthHeader,
