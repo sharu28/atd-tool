@@ -86,3 +86,6 @@ def update_prompt(new_prompt: dict, auth: bool = Depends(check_admin)):
     with open("app/prompt.json", "w") as f:
         json.dump(new_prompt, f, indent=2)
     return {"msg": "Prompt updated"}
+
+from fastapi.staticfiles import StaticFiles
+app.mount("/", StaticFiles(directory="app/static", html=True), name="static")
