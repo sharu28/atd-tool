@@ -7,8 +7,8 @@ export default function App() {
   const [data,    setData]    = useState(null);
   const [error,   setError]   = useState("");
 
-  // Force the base URL to be the same origin as the page you're on:
-  const API_BASE = window.location.origin;
+  // Point directly at API:
+  const API_BASE = "https://atd-tool.onrender.com";
 
   async function handleSubmit(e) {
     e.preventDefault();
