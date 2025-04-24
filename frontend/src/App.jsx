@@ -22,11 +22,10 @@ export default function App() {
       const fd = new FormData();
       fd.append("file", file);
 
-      // ← note the change here: full absolute URL instead of just "/validate"
-      const res = await fetch(`${API_BASE}/validate`, {
-        method: "POST",
-        body: fd
-      });
+      const res = await fetch(
+        "https://atd-tool.onrender.com/validate",
+        { method: "POST", body: fd }
+      );
 
       const text = await res.text();
       console.log("🛰  /validate response", res.status, text);
