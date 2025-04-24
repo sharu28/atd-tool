@@ -2,10 +2,10 @@
 import { useState } from "react";
 
 export default function App() {
-  const [file, setFile]       = useState(null);
+  const [file,    setFile]    = useState(null);
   const [loading, setLoading] = useState(false);
-  const [data, setData]       = useState(null);
-  const [error, setError]     = useState("");
+  const [data,    setData]    = useState(null);
+  const [error,   setError]   = useState("");
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -19,23 +19,30 @@ export default function App() {
       const fd = new FormData();
       fd.append("file", file);
 
-      const res = await fetch("/validate", {
-        method: "POST",
-        body: fd
-      });
+      const res = await fetch("/validate", { method: "POST", body: fd });
 
-      // Always parse JSON, even on error status
-      const json = await res.json();
+      // read raw text so we can log it if needed
+      const text = await res.text();
+      console.log("🛰  /validate response", res.status, text);
+
+      let json;
+      try {
+        json = JSON.parse(text);
+      } catch (parseErr) {
+        console.warn("Could not parse JSON:", parseErr);
+        json = {};
+      }
 
       if (!res.ok) {
-        // Show server-provided error if available
-        setError(json.error || `Server error ${res.status}`);
+        // try both error and detail fields
+        const msg = json.error || json.detail || `Server error ${res.status}`;
+        setError(msg);
       } else {
         setData(json);
       }
-    } catch (err) {
-      console.error(err);
-      setError("Network error: " + err.message);
+    } catch (networkErr) {
+      console.error("Network error:", networkErr);
+      setError("Network error: " + networkErr.message);
     } finally {
       setLoading(false);
     }
@@ -63,7 +70,7 @@ export default function App() {
         <input
           type="file"
           accept=".doc,.docx"
-          onChange={e => setFile(e.target.files[0])}
+          onChange={(e) => setFile(e.target.files[0])}
         />
         <button disabled={loading}>
           {loading ? "Checking…" : "Validate"}
@@ -74,14 +81,8 @@ export default function App() {
 
       {data && (
         <>
-          <Section
-            title="Client information"
-            list={data.CLIENT_INFORMATION}
-          />
-          <Section
-            title="Figures & values"
-            list={data.FIGURES_AND_VALUES}
-          />
+          <Section title="Client information" list={data.CLIENT_INFORMATION} />
+          <Section title="Figures & values" list={data.FIGURES_AND_VALUES} />
           <Section
             title="Typography & language"
             list={data.TYPOGRAPHY_AND_LANGUAGE}
