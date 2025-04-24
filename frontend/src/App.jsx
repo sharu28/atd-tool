@@ -7,6 +7,9 @@ export default function App() {
   const [data,    setData]    = useState(null);
   const [error,   setError]   = useState("");
 
+  // Force the base URL to be the same origin as the page you're on:
+  const API_BASE = window.location.origin;
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (!file) return;
@@ -19,9 +22,12 @@ export default function App() {
       const fd = new FormData();
       fd.append("file", file);
 
-      const res = await fetch("/validate", { method: "POST", body: fd });
+      // ← note the change here: full absolute URL instead of just "/validate"
+      const res = await fetch(`${API_BASE}/validate`, {
+        method: "POST",
+        body: fd
+      });
 
-      // read raw text so we can log it if needed
       const text = await res.text();
       console.log("🛰  /validate response", res.status, text);
 
@@ -34,7 +40,6 @@ export default function App() {
       }
 
       if (!res.ok) {
-        // try both error and detail fields
         const msg = json.error || json.detail || `Server error ${res.status}`;
         setError(msg);
       } else {
@@ -82,7 +87,7 @@ export default function App() {
       {data && (
         <>
           <Section title="Client information" list={data.CLIENT_INFORMATION} />
-          <Section title="Figures & values" list={data.FIGURES_AND_VALUES} />
+          <Section title="Figures & values"    list={data.FIGURES_AND_VALUES} />
           <Section
             title="Typography & language"
             list={data.TYPOGRAPHY_AND_LANGUAGE}
